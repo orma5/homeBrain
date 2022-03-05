@@ -19,3 +19,14 @@ services:
     ports:
       - 9000:9000
       - 9443:9443
+  home-assistant:
+    container_name: home-assistant
+    image: homeassistant/home-assistant:stable
+    ports:
+     - 7000:8123
+    volumes:
+      - ${DATADIR}/ha:/config
+    environment:
+      - TZ=${TZ}
+    restart: always
+    network_mode: host
