@@ -25,8 +25,7 @@ services:
     ports:
      - 7000:8123
     volumes:
-      - ${DATADIR}/ha:/config
+      - ${DATADIR}/homeassistant:/config
     environment:
       - TZ=${TZ}
     restart: always
-    network_mode: host
