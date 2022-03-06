@@ -1,5 +1,9 @@
 version: "3"
+
+
 services: 
+
+
   portainer:
     image: portainer/portainer-ce
     container_name: portainer
@@ -8,6 +12,52 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${DATADIR}/portainer:/data
-     
     ports:
       - 2000:9000
+
+
+  adguardhome:
+    container_name: adguardhome
+    restart: unless-stopped
+    image: adguard/adguardhome
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+      - 784:784/udp
+      - 853:853/tcp
+      - 3000:3000/tcp
+      - 80:80/tcp
+      - 443:443/tcp
+    volumes:
+      - ${DATADIR}/agh/work:/opt/adguardhome/work
+      - ${DATADIR}/agh/conf:/opt/adguardhome/conf
+
+    networks:
+      - agmvlan
+
+  heimdall:
+    image: lscr.io/linuxserver/heimdall
+    container_name: heimdall
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DATADIR}/heimdall:/config
+    ports:
+      - 4000:80
+      - 4443:443
+    restart: unless-stopped
+
+networks:
+  agmvlan:
+    driver: macvlan
+    driver_opts:
+      parent: eno1
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          ip_range: 192.168.1.50/32
+          gateway: 192.168.1.1
+
+  
