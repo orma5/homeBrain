@@ -1,0 +1,114 @@
+version: "3"
+
+services:
+
+  jellyfin:
+      image: lscr.io/linuxserver/jellyfin:latest
+      container_name: jellyfin
+      environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=Etc/UTC
+        - JELLYFIN_PublishedServerUrl=192.168.1.10 #optional
+      volumes:
+        - ${DATADIR}/jellyfin/config:/config
+        - ${DATADIR}/jellyfin/tvshows:/data/tvshows
+        - /media/extssd/data/completed:/data/movies
+      ports:
+        - 8096:8096
+        - 8920:8920 #optional
+        - 7359:7359/udp #optional
+        - 1900:1900/udp #optional
+      restart: unless-stopped
+
+  transmission-openvpn:
+        cap_add:
+            - NET_ADMIN
+        restart: unless-stopped
+        volumes:
+            - /media/extssd/data:/data
+            - /media/extssd/config:/config
+        environment:
+            - OPENVPN_PROVIDER=NORDVPN
+            - NORDVPN_COUNTRY=${NORDVPN_COUNTRY}
+            - OPENVPN_USERNAME=${OPENVPN_USERNAME}
+            - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
+            - LOCAL_NETWORK=192.168.1.0/24
+        logging:
+            driver: json-file
+            options:
+                max-size: 10m
+        ports:
+            - '9091:9091'
+            - '51413:51413'
+        image: haugene/transmission-openvpn
+
+  personalfinance:
+    image: orma5/personalfinance:latest
+    container_name: personalfinance
+    restart: unless-stopped
+    environment:
+      - NORDIGEN_SECRET_ID=${NORDIGEN_SECRET_ID}
+      - NORDIGEN_SECRET_KEY=${NORDIGEN_SECRET_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DATADIR}/portainer:/data
+    ports:
+      - 2000:9000
+
+  adguardhome:
+    container_name: adguardhome
+    restart: unless-stopped
+    image: adguard/adguardhome:latest
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+      - 784:784/udp
+      - 853:853/tcp
+      - 3000:3000/tcp
+      - 80:80/tcp
+      - 443:443/tcp
+    volumes:
+      - ${DATADIR}/agh/work:/opt/adguardhome/work
+      - ${DATADIR}/agh/conf:/opt/adguardhome/conf
+
+    networks:
+      - agmvlan
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ${DATADIR}/postgres-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+networks:
+  agmvlan:
+    driver: macvlan
+    driver_opts:
+      parent: eno1
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          ip_range: 192.168.1.50/32
+          gateway: 192.168.1.1

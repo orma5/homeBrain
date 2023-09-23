@@ -1,0 +1,8 @@
+#ignore .env file
+.env
+
+#ignore dockerData folder
+/dockerData
+
+#ignore archive of old config files
+/archive

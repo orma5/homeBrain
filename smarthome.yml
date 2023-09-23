@@ -1,0 +1,42 @@
+version: "3.8"
+ 
+services:
+ 
+  home-assistant: 
+    container_name: home-assistant
+    environment: 
+      - "TZ=${TZ}"
+    image: "homeassistant/home-assistant:latest"
+    ports: 
+      - "7000:8123"
+    restart: always
+    volumes: 
+      - "${DATADIR}/homeassistant:/config"
+      - /dev/serial/by-id/:/dev/serial/by-id
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+  mqtt:
+    command: "mosquitto -c /mosquitto-no-auth.conf"
+    image: "eclipse-mosquitto:latest"
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    restart: unless-stopped
+    volumes:
+      - "${DATADIR}/mosquitto/conf:/mosquitto/conf"
+      - "${DATADIR}/mosquitto/data:/mosquitto/data"
+      - "${DATADIR}/mosquitto/log:/mosquitto/log"
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    environment:
+      - TZ=Europe/Berlin
+    image: "koenkk/zigbee2mqtt:latest"
+    ports:
+      - "9000:8080"
+    restart: unless-stopped
+    volumes:
+      - "${DATADIR}/zigbee2mqtt:/app/data"
+      - "/run/udev:/run/udev:ro"
